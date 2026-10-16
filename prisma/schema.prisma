@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// OAuth sessions, managed by @shopify/shopify-app-session-storage-prisma.
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// State values are enforced in app/services/stateMachine.server.js
+// (SQLite has no native enums).
+//   INITIATED -> REDIRECTED_3DS -> CONFIRMING -> CONFIRMED -> RESOLVED | REJECTED
+//   INITIATED -> RESOLVED | REJECTED
+model PaymentSession {
+  id                  String    @id // Shopify `id`: the idempotency key
+  gid                 String    @unique
+  shop                String
+  groupId             String
+  buyerSessionId      String?
+  kind                String // sale | authorization
+  test                Boolean
+  amount              String
+  amountMinor         Int
+  currency            String
+  proposedAt          DateTime
+  // Shopify's payment_method hash, card data still ECIES-encrypted.
+  paymentMethod       String
+  customer            String?
+  state               String    @default("INITIATED")
+  // RESOLVE | REJECT. Set exactly once (claim), before the mutation is sent.
+  outcome             String?
+  rejectCode          String?
+  rejectMessage       String?
+  finalizedAt         DateTime?
+  cardLast4           String?
+  cardBrand           String?
+  processorStatus     String? // approved | declined
+  processorRef        String?
+  networkTransactionId String?
+  threeDSRequired     Boolean   @default(false)
+  threeDSResult       String? // PaymentSessionThreeDSecureAuthenticationData JSON
+  redirectSentAt      DateTime?
+  confirmationResult  Boolean?
+  buyerReturnUrl      String? // nextAction.redirectUrl returned by Shopify
+  refundedMinor       Int       @default(0)
+  lastError           String?
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  challenge ThreeDSChallenge?
+
+  @@index([shop])
+  @@index([state])
+}
+
+//   INITIATED -> RESOLVED | REJECTED
+model RefundSession {
+  id            String    @id // Shopify refund `id`: the idempotency key
+  gid           String    @unique
+  shop          String
+  // No FK: a refund for an unknown payment is stored, then rejected.
+  paymentId     String
+  amount        String
+  amountMinor   Int
+  currency      String
+  test          Boolean
+  proposedAt    DateTime
+  state         String    @default("INITIATED")
+  outcome       String?
+  rejectCode    String?
+  rejectMessage String?
+  finalizedAt   DateTime?
+  reservedMinor Int       @default(0) // held against the payment's refundable balance
+  processorRef  String?
+  lastError     String?
+  lockedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([paymentId])
+  @@index([state])
+}
+
+model ThreeDSChallenge {
+  token            String         @id // unguessable, used in the iframe URL
+  paymentSessionId String         @unique
+  paymentSession   PaymentSession @relation(fields: [paymentSessionId], references: [id])
+  status           String         @default("PENDING") // PENDING | PASSED | FAILED
+  expiresAt        DateTime
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+}
+
+// Capture and void sessions. The credit card target requires their URLs, but
+// only refund is implemented, so these are recorded and rejected once.
+model UnsupportedSession {
+  id         String    @id
+  gid        String    @unique
+  kind       String // capture | void
+  shop       String
+  paymentId  String
+  rejectedAt DateTime?
+  lastError  String?
+  createdAt  DateTime  @default(now())
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  entityType String // payment | refund
+  entityId   String
+  event      String
+  fromState  String?
+  toState    String?
+  data       String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}

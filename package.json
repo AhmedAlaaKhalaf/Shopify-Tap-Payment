@@ -1,0 +1,41 @@
+{
+  "name": "tap-shopify-credit-card-payments",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.10"
+  },
+  "scripts": {
+    "build": "remix vite:build",
+    "dev": "shopify app dev",
+    "dev:local": "node --env-file=.env node_modules/@remix-run/dev/dist/cli.js vite:dev --port 3000",
+    "start": "remix-serve ./build/server/index.js",
+    "setup": "prisma generate && prisma migrate deploy",
+    "mock-shopify": "node mock-shopify/server.js",
+    "simulate": "node scripts/simulate.js",
+    "demo": "node --env-file=.env scripts/demo.js",
+    "test": "vitest run",
+    "deploy": "shopify app deploy",
+    "config:link": "shopify app config link",
+    "prisma": "prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "@remix-run/node": "^2.17.5",
+    "@remix-run/react": "^2.17.5",
+    "@remix-run/serve": "^2.17.5",
+    "@shopify/shopify-app-remix": "^3.8.5",
+    "@shopify/shopify-app-session-storage-prisma": "^6.0.9",
+    "isbot": "^5.2.2",
+    "pino": "^9.14.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^2.17.5",
+    "pino-pretty": "^13.2.0",
+    "prisma": "^6.19.3",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.9"
+  }
+}

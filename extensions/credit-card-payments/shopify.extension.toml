@@ -1,0 +1,33 @@
+# https://shopify.dev/docs/apps/build/payments/configuration
+# Replace https://example.com with SHOPIFY_APP_URL before `shopify app deploy`.
+# `uid` is added by Shopify CLI the first time the extension is deployed.
+
+api_version = "2026-07"
+
+[[extensions]]
+name = "Tap Credit Card (case study)"
+handle = "tap-credit-card"
+type = "payments_extension"
+
+merchant_label = "Tap Credit Card (mock processor)"
+
+payment_session_url = "https://example.com/payment_session"
+confirmation_callback_url = "https://example.com/confirm_session"
+refund_session_url = "https://example.com/refund_session"
+# Required for the credit card target. Both endpoints reject: refund is the
+# only post-authorization operation implemented in this case study.
+capture_session_url = "https://example.com/capture_session"
+void_session_url = "https://example.com/void_session"
+
+supported_countries = ["SA", "AE", "KW", "BH", "QA", "OM", "US"]
+supported_payment_methods = ["visa", "master"]
+supports_3ds = true
+supports_moto = false
+supports_installments = false
+supports_deferred_payments = false
+test_mode_available = true
+
+encryption_certificate_fingerprint = "<ENCRYPTION_CERTIFICATE_FINGERPRINT>"
+
+  [[extensions.targeting]]
+  target = "payments.credit-card.render"
